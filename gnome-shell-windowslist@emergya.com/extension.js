@@ -45,6 +45,7 @@ const PopupMenu = imports.ui.popupMenu;
 const PanelMenu = imports.ui.panelMenu;
 const AltTab = imports.ui.altTab;
 
+const WINDOW_TITLE_MAX_LENGTH = 40;
 
 function AppMenuButtonAlt(app) {
     this._init(app);
@@ -81,16 +82,7 @@ AppMenuButtonAlt.prototype = {
         this._label = new Panel.TextShadower();
         this._container.add_actor(this._label.actor);
 
-        this._iconBottomClip = 0;
-
-//        this._quitMenu = new PopupMenu.PopupMenuItem('');
-//        this.menu.addMenuItem(this._quitMenu);
-//        this._quitMenu.connect('activate', Lang.bind(this, this._onQuit));
-        
-        // TODO: Disconnect signals
-//        this.menu = null;
-//        this.menu = new PopupMenu.PopupMenu(this.actor, menuAlignment, St.Side.TOP, 0);
-        
+        this._iconBottomClip = 0;        
 
         this._visible = !Main.overview.visible;
         if (!this._visible)
@@ -115,55 +107,69 @@ AppMenuButtonAlt.prototype = {
         //tracker.connect('app-state-changed', Lang.bind(this, this._onAppStateChanged));
         
 
-        global.window_manager.connect('switch-workspace', Lang.bind(this, this._sync));
+//        global.window_manager.connect('switch-workspace', Lang.bind(this, this._sync));
 
+        this._refreshMenuItems();
         this._sync();
+    },
+    
+    _refreshMenuItems: function() {
+    	
+    	this.menu.removeAll();
+    	let windows = this.getWindows();
+    	
+    	for (let i = 0, l = windows.length; i < l; i++) {
+    		let window = windows[i];
+    		let title = window.get_title();
+    		if (title.length > WINDOW_TITLE_MAX_LENGTH) {
+    			title = title.substr(0, WINDOW_TITLE_MAX_LENGTH - 3) + '...';
+    		}
+			let item = new PopupMenu.PopupMenuItem(title);
+			item.connect('activate', Lang.bind(this, function() { this._itemActivated(window); }));
+			this.menu.addMenuItem(item);
+    	}
+    	
+    	this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+		let item = new PopupMenu.PopupMenuItem(_('Cerrar todo'));
+		item.connect('activate', Lang.bind(this, this._onQuit));
+		this.menu.addMenuItem(item);
+    },
+    
+    _itemActivated: function(window) {
+    	Main.activateWindow(window);
+    },
+    
+    getWindows: function() {
+		let windows = this._targetApp.get_windows();
+		return windows;
+    },
+    
+    _onQuit: function() {
+    	let windows = this.getWindows();
+    	for (let i = 0, l = windows.length; i < l; i++) {
+    		let window = windows[i];
+    		window.delete(global.get_current_time());
+    	}
+    },
+
+    _onOpenStateChanged: function(menu, open) {
+        if (open) {
+			this._refreshMenuItems();
+        }
+        PanelMenu.Button.prototype._onOpenStateChanged.call(this, menu, open);
+    },
+
+    _onButtonPress: function(actor, event) {
+        let windows = this.getWindows();
+        if (windows.length == 1 && !this.menu.isOpen) {
+        	this._itemActivated(windows[0]);
+        }
+        PanelMenu.Button.prototype._onButtonPress.call(this, actor, event);
     },
 
     _sync: function() {
     	
-    	/*
-        let tracker = Shell.WindowTracker.get_default();
-        let lastStartedApp = null;
-        let workspace = global.screen.get_active_workspace();
-        for (let i = 0; i < this._startingApps.length; i++)
-            if (this._startingApps[i].is_on_workspace(workspace))
-                lastStartedApp = this._startingApps[i];
-
-        let focusedApp = tracker.focus_app;
-
-        if (!focusedApp) {
-            // If the app has just lost focus to the panel, pretend
-            // nothing happened; otherwise you can't keynav to the
-            // app menu.
-            if (global.stage_input_mode == Shell.StageInputMode.FOCUSED)
-                return;
-        }
-        */
-
-        //let targetApp = focusedApp != null ? focusedApp : lastStartedApp;
         let targetApp = this._targetApp;
-//        try {
-//        	global.log(targetApp.get_name());
-//        } catch(e) {
-//        	global.logError(e);
-//        }
-
-        /*
-        if (targetApp == null) {
-            if (!this._targetIsCurrent)
-                return;
-
-            this.actor.reactive = false;
-            this._targetIsCurrent = false;
-
-            Tweener.removeTweens(this.actor);
-            Tweener.addTween(this.actor, { opacity: 0,
-                                           time: Overview.ANIMATION_TIME,
-                                           transition: 'easeOutQuad' });
-            return;
-        }
-        */
 
         if (!this._targetIsCurrent) {
             this.actor.reactive = true;
@@ -175,14 +181,6 @@ AppMenuButtonAlt.prototype = {
                                            transition: 'easeOutQuad' });
         }
 
-        /*
-        if (targetApp == this._targetApp) {
-            if (targetApp && targetApp.get_state() != Shell.AppState.STARTING)
-                this.stopAnimation();
-            return;
-        }
-        */
-
         this._spinner.actor.hide();
         if (this._iconBox.child != null)
             this._iconBox.child.destroy();
@@ -193,25 +191,14 @@ AppMenuButtonAlt.prototype = {
         let icon = targetApp.get_faded_icon(2 * Panel.PANEL_ICON_SIZE);
 
         this._label.setText(targetApp.get_name());
-        // TODO - _quit() doesn't really work on apps in state STARTING yet
-//        this._quitMenu.label.set_text(_("Quit %s").format(targetApp.get_name()));
 
         this._iconBox.set_child(icon);
         this._iconBox.show();
 
         if (targetApp.get_state() == Shell.AppState.STARTING)
             this.startAnimation();
-
+        
         this.emit('changed');
-    },
-    
-    getWindows: function() {
-		let windows = this._targetApp.get_windows();
-		return windows;
-    },
-    
-    _onQuit: function() {
-    	
     }
 };
 
@@ -228,8 +215,6 @@ WindowsList.prototype = {
 		this.listContainer = listContainer;
 		this.tracker = Shell.WindowTracker.get_default();
 		this.apps = {};
-		this._thumbnails = null;
-		this.thumbnailsVisible = false;
 
 		
         this._nWorkspacesNotifyId =
@@ -294,24 +279,7 @@ WindowsList.prototype = {
 	_windowRemoved: function(metaWorkspace, metaWin) {
 		
 //		global.log('___WINDOW_REMOVED___');
-		
-		try {
-			
-			// NOTE: Can't get the application object from metaWin, app = null ?
-//			let app = this.tracker.get_window_app(metaWin);
-//			let appName = app.get_name();
-//			
-//			if (this.apps[appName] && this.metaWorkspace == metaWorkspace) {
-//				let windows = app.get_windows();
-//				global.log(windows.length);
-////				delete this.apps[appName];
-//			}
-			
-			this._sync();
-			
-		} catch(e) {
-			global.log(e);
-		}
+		this._sync();
 	},
 	
 	_sync: function() {
@@ -319,12 +287,13 @@ WindowsList.prototype = {
 		this._clearWindowsList();
 		
 		let apps = this.tracker.get_running_apps('');
-		apps.forEach(Lang.bind(this, function(app) {
+		for (let i = 0, l = apps.length; i < l; i++) {
+			let app = apps[i];
 			let appName = app.get_name();
 			if (!this.apps[appName] && app.is_on_workspace(this.metaWorkspace)) {
 				this.apps[appName] = this._createAppMenuButton(app);
 			}
-		}));
+		}
 		
 		window._apps = this.apps;
 	},
@@ -343,100 +312,25 @@ WindowsList.prototype = {
 	
 	_createAppMenuButton: function(app) {
 
+//		global.log(app.get_id());
 //		global.log(app.get_name());
+					
+		let appMenuButtonAlt = new AppMenuButtonAlt(app);
 		
-		let appMenuButtonAlt = null;
-		
-		try {
-			
-			appMenuButtonAlt = new AppMenuButtonAlt(app);
-			
-			let thumbnails = new AltTab.ThumbnailList(appMenuButtonAlt.getWindows());
-//			appMenuButtonAlt._quitMenu.actor.add_actor(thumbnails.actor);
-			
-			this.listContainer.add(appMenuButtonAlt.actor, { y_fill: true });
-			appMenuButtonAlt.menu._boxPointer._arrowSide = St.Side.BOTTOM;
-		    Main.panel._menus.addMenu(appMenuButtonAlt.menu);
-		    
-		    // Synchronize the button's pseudo classes with its corner
-		    appMenuButtonAlt.actor.connect('style-changed', Lang.bind(this,
-	    		function(actor) {
-			    	let rtl = actor.get_direction() == St.TextDirection.RTL;
-			    	let corner = rtl ? Main.panel._rightCorner : Main.panel._leftCorner;
-			    	let pseudoClass = actor.get_style_pseudo_class();
-			    	corner.actor.set_style_pseudo_class(pseudoClass);
-			    }));
-		    
-		    appMenuButtonAlt.actor.connect('notify::hover', Lang.bind(this, function(actor) {
-		        try {
-		            this.show(appMenuButtonAlt);
-    	        } catch(e) {
-    	            global.logError(e);
-    	        }
+		this.listContainer.add(appMenuButtonAlt.actor, { y_fill: true });
+		appMenuButtonAlt.menu._boxPointer._arrowSide = St.Side.BOTTOM;
+	    Main.panel._menus.addMenu(appMenuButtonAlt.menu);
+	    
+	    // Synchronize the button's pseudo classes with its corner
+	    appMenuButtonAlt.actor.connect('style-changed', Lang.bind(this,
+    		function(actor) {
+		    	let rtl = actor.get_direction() == St.TextDirection.RTL;
+		    	let corner = rtl ? Main.panel._rightCorner : Main.panel._leftCorner;
+		    	let pseudoClass = actor.get_style_pseudo_class();
+		    	corner.actor.set_style_pseudo_class(pseudoClass);
 		    }));
-		    
-		} catch(e) {
-			global.logError(e);
-			return null;
-		}
 
 	    return appMenuButtonAlt;
-	},
-	
-	show: function(appMenuButtonAlt) {
-	    
-	    if (this.thumbnailsVisible)
-	        return;
-		    
-    	this._thumbnails = new AltTab.ThumbnailList(appMenuButtonAlt.getWindows());
-    	
-    	Main.uiGroup.add_actor(this._thumbnails.actor);
-    	
-    	let monitor = global.get_primary_monitor();
-    	this._thumbnails.actor.set_height(208);
-    	this._thumbnails.actor.set_position(
-    			Math.floor(monitor.width / 2 - this._thumbnails.actor.width / 2),
-    			Math.floor(monitor.height / 2 - this._thumbnails.actor.height / 2)
-    	);
-    	
-//    	try {
-//    	    this._thumbnails.addClones(404);
-//    	} catch (e) {
-//    	    global.logError(e);
-//    	}
-
-        this._thumbnails.actor.opacity = 0;
-        Tweener.addTween(this._thumbnails.actor,
-                         { opacity: 255,
-                           time: AltTab.THUMBNAIL_FADE_TIME,
-                           transition: 'easeOutQuad',
-                           onComplete: Lang.bind(this, function () { /*this.thumbnailsVisible = true;*/ })
-                         });
-
-//            this._thumbnails.highlight(window, forceAppFocus);
-        
-        this._thumbnails.addClones(AltTab.THUMBNAIL_DEFAULT_SIZE);
-        
-        this.thumbnailsVisible = true;
-        Mainloop.timeout_add(4000, Lang.bind(this, this.hide));
-	},
-	
-	hide: function() {
-        if (this._thumbnails != null) {
-            let thumbnailsActor = this._thumbnails.actor;
-            Tweener.addTween(thumbnailsActor,
-                             { opacity: 0,
-                               time: AltTab.THUMBNAIL_FADE_TIME,
-                               transition: 'easeOutQuad',
-                               onComplete: Lang.bind(this, function() {
-                                                                thumbnailsActor.destroy();
-                                                                this.thumbnailsVisible = false;
-                                                            })
-                             });
-//            global.stage.remove_actor(this._thumbnails.actor);
-            Main.uiGroup.remove_actor(this._thumbnails.actor);
-            this._thumbnails = null;
-        }
 	}
 }
 
