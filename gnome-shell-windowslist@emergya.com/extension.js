@@ -33,6 +33,7 @@ const Gdk = imports.gi.Gdk;
 const St = imports.gi.St;
 const Signals = imports.signals;
 const Mainloop = imports.mainloop;
+const Meta = imports.gi.Meta;
 const Lang = imports.lang;
 const Shell = imports.gi.Shell;
 const Gettext = imports.gettext.domain('gnome-shell');
@@ -204,6 +205,10 @@ AppMenuButtonAlt.prototype = {
             this.startAnimation();
 
         this.emit('changed');
+    },
+    
+    getApplication: function() {
+        return this._targetApp;
     },
     
     getWindows: function() {
@@ -393,24 +398,26 @@ ThumbnailsPopup.prototype = {
     },
 
     _nextApp : function() {
-        return mod(this._currentApp + 1, this._appIcons.length);
+        return AltTab.mod(this._currentApp + 1, this._appIcons.length);
     },
     _previousApp : function() {
-        return mod(this._currentApp - 1, this._appIcons.length);
+        return AltTab.mod(this._currentApp - 1, this._appIcons.length);
     },
 
     _nextWindow : function() {
+        return null;
         // We actually want the second window if we're in the unset state
         if (this._currentWindow == -1)
             this._currentWindow = 0;
-        return mod(this._currentWindow + 1,
+        return AltTab.mod(this._currentWindow + 1,
                    this._appIcons[this._currentApp].cachedWindows.length);
     },
     _previousWindow : function() {
+        return null;
         // Also assume second window here
         if (this._currentWindow == -1)
             this._currentWindow = 1;
-        return mod(this._currentWindow - 1,
+        return AltTab.mod(this._currentWindow - 1,
                    this._appIcons[this._currentApp].cachedWindows.length);
     },
 
@@ -418,16 +425,29 @@ ThumbnailsPopup.prototype = {
         let keysym = event.get_key_symbol();
         let event_state = Shell.get_event_state(event);
         let backwards = event_state & Clutter.ModifierType.SHIFT_MASK;
-        let action = global.screen.get_display().get_keybinding_action(event.get_key_code(), event_state);
 
+//global.log('__________________________');
+//global.log(event_state);
+        event_state = event_state | Clutter.ModifierType.MOD1_MASK;
+        
+        let action = global.screen.get_display().get_keybinding_action(event.get_key_code(), event_state);
+//global.log(keysym);
+//global.log(event.get_key_code());
+//global.log(event_state);
+//global.log(action);
+//global.log('_________________________________');
+        
+//        action = Meta.KeyBindingAction.SWITCH_WINDOWS;
+        
         this._disableHover();
 
         if (action == Meta.KeyBindingAction.SWITCH_GROUP)
             this._select(this._currentApp, backwards ? this._previousWindow() : this._nextWindow());
         else if (keysym == Clutter.Escape)
             this.destroy();
-        else if (this._thumbnailsFocused) {
-            if (action == Meta.KeyBindingAction.SWITCH_WINDOWS)
+        else if (this._thumbnailsFocused || 1 == 1) {
+            if (action == Meta.KeyBindingAction.SWITCH_WINDOWS) {
+
                 if (backwards) {
                     if (this._currentWindow == 0 || this._currentWindow == -1)
                         this._select(this._previousApp());
@@ -439,12 +459,19 @@ ThumbnailsPopup.prototype = {
                     else
                         this._select(this._currentApp, this._nextWindow());
                 }
-            else if (keysym == Clutter.Left)
-                this._select(this._currentApp, this._previousWindow());
-            else if (keysym == Clutter.Right)
-                this._select(this._currentApp, this._nextWindow());
-            else if (keysym == Clutter.Up)
-                this._select(this._currentApp, null, true);
+            } else if (keysym == Clutter.Left) {
+//                this._select(this._currentApp, this._previousWindow());
+              this._select(this._previousApp());
+            } else if (keysym == Clutter.Right) {
+//                this._select(this._currentApp, this._nextWindow());
+                this._select(this._nextApp());
+            } else if (keysym == Clutter.Up) {
+//                this._select(this._currentApp, null, true);
+            } else if (keysym == Clutter.Return) {
+                this._appActivated(this, this._currentApp);
+            }
+            
+            
         } else {
             if (action == Meta.KeyBindingAction.SWITCH_WINDOWS)
                 this._select(backwards ? this._previousApp() : this._nextApp());
@@ -464,7 +491,7 @@ ThumbnailsPopup.prototype = {
         let state = mods & Clutter.ModifierType.MOD1_MASK;
 
         if (state == 0)
-            this._finish();
+//            this._finish();
 
         return true;
     },
@@ -508,16 +535,25 @@ ThumbnailsPopup.prototype = {
         // If the user clicks on the selected app, activate the
         // selected window; otherwise (eg, they click on an app while
         // !mouseActive) activate the the clicked-on app.
-        if (n == this._currentApp) {
-            let window;
-            if (this._currentWindow >= 0)
-                window = this._appIcons[this._currentApp].cachedWindows[this._currentWindow];
-            else
-                window = null;
-            this._appIcons[this._currentApp].app.activate_window(window, global.get_current_time());
-        } else {
-            this._appIcons[n].app.activate_window(null, global.get_current_time());
+//        if (n == this._currentApp) {
+//            let window;
+//            if (this._currentWindow >= 0)
+//                window = this._appIcons[this._currentApp].cachedWindows[this._currentWindow];
+//            else
+//                window = null;
+//            this._appIcons[this._currentApp].app.activate_window(window, global.get_current_time());
+//        } else {
+//            this._appIcons[n].app.activate_window(null, global.get_current_time());
+//        }
+//        this._appIcons[n].app.activate_window(null, global.get_current_time());
+        
+        try {
+            let windows = this._appMenuButtonAlt.getWindows();
+            this._appMenuButtonAlt.getApplication().activate_window(windows[n], global.get_current_time());
+        } catch (e) {
+            global.logError(e);
         }
+        
         this.destroy();
     },
 
@@ -586,6 +622,7 @@ ThumbnailsPopup.prototype = {
                              });
         } else
             this.actor.destroy();
+        this.emit('destroy');
     },
 
     _onDestroy : function() {
@@ -693,6 +730,8 @@ ThumbnailsPopup.prototype = {
                          });
     }
 };
+
+Signals.addSignalMethods(ThumbnailsPopup.prototype);
 
 function WindowsList(listContainer) {
 	this._init(listContainer);
@@ -843,13 +882,19 @@ WindowsList.prototype = {
 			    	corner.actor.set_style_pseudo_class(pseudoClass);
 			    }));
 		    
-		    appMenuButtonAlt.actor.connect('notify::hover', Lang.bind(this, function(actor) {
+		    appMenuButtonAlt.actor.connect(/*'notify::hover'*/ 'button-press-event', Lang.bind(this, function(actor) {
 		        try {
 		            this.show(appMenuButtonAlt);
     	        } catch(e) {
     	            global.logError(e);
     	        }
 		    }));
+            
+            appMenuButtonAlt.actor.connect('notify::hover', Lang.bind(this, function(actor) {
+                if (this.thumbnailsVisible) {
+//                    global.log('__HOVER__');
+                }
+            }));
 		    
 		} catch(e) {
 			global.logError(e);
@@ -861,33 +906,45 @@ WindowsList.prototype = {
 	
 	show: function(appMenuButtonAlt) {
 	    
-	    if (this._thumbnails && appMenuButtonAlt === this._thumbnails._appMenuButtonAlt) {
-	        return;
-	    }
+//	    if (this._thumbnails && appMenuButtonAlt === this._thumbnails._appMenuButtonAlt) {
+//	        global.log('__1__');
+//	        return;
+//	    }
 	    
+//	    global.log(this.thumbnailsVisible);
 	    if (this.thumbnailsVisible) {
-	        this.hide();
-	        return;
+	        global.log(appMenuButtonAlt === this._thumbnails._appMenuButtonAlt);
+            global.log(appMenuButtonAlt);
+            global.log(this._thumbnails._appMenuButtonAlt);
+	        if (appMenuButtonAlt === this._thumbnails._appMenuButtonAlt)
+	            this.hide();
 	    }
 
 	    this._thumbnails = new ThumbnailsPopup(appMenuButtonAlt);
 
-        if (!this._thumbnails.show(backwards = false, binding = 'switch_windows')) {
+	    // See Meta.KeyBindingAction, Meta.KeyBindingAction.SWITCH_GROUP
+        if (!this._thumbnails.show(backwards = false, binding = Meta.KeyBindingAction.SWITCH_WINDOWS)) {
+            
             this._thumbnails.destroy();
-            this._thumbnails = undefined;
+//            this._thumbnails = undefined;
+            
         } else {
-            this.thumbnailsVisible = true;            
+            
+            this.thumbnailsVisible = true;
+            this._thumbnails.connect('destroy', Lang.bind(this, function(actor) {
+//                global.log('__DESTROY__');
+//                this.hide();
+                this._thumbnails = undefined;
+                this.thumbnailsVisible = false;
+            }));
         }
         
 //        Mainloop.timeout_add(4000, Lang.bind(this, this.hide));
 	},
 	
 	hide: function() {
-	    if (!this._thumbnails)
-	        return;
-	    this._thumbnails.destroy();
-	    this._thumbnails = undefined;
-	    this.thumbnailsVisible = false;
+	    if (this._thumbnails)
+	        this._thumbnails.destroy();
 	}
 }
 
