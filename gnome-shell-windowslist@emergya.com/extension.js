@@ -367,8 +367,7 @@ function main(extensionMeta) {
         childBox.y1 = 0;
         childBox.y2 = allocHeight;
         if (this.actor.get_direction() == St.TextDirection.RTL) {
-            childBox.x1 = allocWidth - Math.min(Math.floor(sideWidth),
-                                                leftNaturalWidth);
+            childBox.x1 = allocWidth - leftNaturalWidth;
             childBox.x2 = allocWidth;
         } else {
             childBox.x1 = 0;
@@ -382,8 +381,7 @@ function main(extensionMeta) {
         childBox.y2 = allocHeight;
         if (this.actor.get_direction() == St.TextDirection.RTL) {
             childBox.x1 = 0;
-            childBox.x2 = Math.min(Math.floor(sideWidth),
-                                   rightNaturalWidth);
+            childBox.x2 = rightNaturalWidth;
         } else {
             childBox.x1 = allocWidth - rightNaturalWidth;
             childBox.x2 = allocWidth;
