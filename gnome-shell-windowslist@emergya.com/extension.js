@@ -29,11 +29,8 @@
  */
 
 const Clutter = imports.gi.Clutter;
-const Gdk = imports.gi.Gdk;
 const St = imports.gi.St;
 const Signals = imports.signals;
-const Mainloop = imports.mainloop;
-const Meta = imports.gi.Meta;
 const Lang = imports.lang;
 const Shell = imports.gi.Shell;
 const Gettext = imports.gettext.domain('gnome-shell');
