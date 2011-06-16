@@ -116,47 +116,47 @@ AppMenuButtonAlt.prototype = {
     },
     
     _refreshMenuItems: function() {
-    	
-    	this.menu.removeAll();
-    	let windows = this.getWindows();
-    	
-    	for (let i = 0, l = windows.length; i < l; i++) {
-    		let window = windows[i];
-    		let title = window.get_title();
-    		if (title.length > WINDOW_TITLE_MAX_LENGTH) {
-    			title = title.substr(0, WINDOW_TITLE_MAX_LENGTH - 3) + '...';
-    		}
-			let item = new PopupMenu.PopupMenuItem(title);
-			item.connect('activate', Lang.bind(this, function() { this._itemActivated(window); }));
-			this.menu.addMenuItem(item);
-    	}
-    	
-    	this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-		let item = new PopupMenu.PopupMenuItem(_('Cerrar todo'));
-		item.connect('activate', Lang.bind(this, this._onQuit));
-		this.menu.addMenuItem(item);
+        
+        this.menu.removeAll();
+        let windows = this.getWindows();
+        
+        for (let i = 0, l = windows.length; i < l; i++) {
+            let window = windows[i];
+            let title = window.get_title();
+            if (title.length > WINDOW_TITLE_MAX_LENGTH) {
+                title = title.substr(0, WINDOW_TITLE_MAX_LENGTH - 3) + '...';
+            }
+            let item = new PopupMenu.PopupMenuItem(title);
+            item.connect('activate', Lang.bind(this, function() { this._itemActivated(window); }));
+            this.menu.addMenuItem(item);
+        }
+        
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        let item = new PopupMenu.PopupMenuItem(_('Cerrar todo'));
+        item.connect('activate', Lang.bind(this, this._onQuit));
+        this.menu.addMenuItem(item);
     },
     
     _itemActivated: function(window) {
-    	Main.activateWindow(window);
+        Main.activateWindow(window);
     },
     
     getWindows: function() {
-		let windows = this._targetApp.get_windows();
-		return windows;
+        let windows = this._targetApp.get_windows();
+        return windows;
     },
     
     _onQuit: function() {
-    	let windows = this.getWindows();
-    	for (let i = 0, l = windows.length; i < l; i++) {
-    		let window = windows[i];
-    		window.delete(global.get_current_time());
-    	}
+        let windows = this.getWindows();
+        for (let i = 0, l = windows.length; i < l; i++) {
+            let window = windows[i];
+            window.delete(global.get_current_time());
+        }
     },
 
     _onOpenStateChanged: function(menu, open) {
         if (open) {
-			this._refreshMenuItems();
+            this._refreshMenuItems();
         }
         PanelMenu.Button.prototype._onOpenStateChanged.call(this, menu, open);
     },
@@ -164,13 +164,13 @@ AppMenuButtonAlt.prototype = {
     _onButtonPress: function(actor, event) {
         let windows = this.getWindows();
         if (windows.length == 1 && !this.menu.isOpen) {
-        	this._itemActivated(windows[0]);
+            this._itemActivated(windows[0]);
         }
         PanelMenu.Button.prototype._onButtonPress.call(this, actor, event);
     },
 
     _sync: function() {
-    	
+        
         let targetApp = this._targetApp;
 
         if (!this._targetIsCurrent) {
@@ -207,17 +207,16 @@ AppMenuButtonAlt.prototype = {
 Signals.addSignalMethods(AppMenuButtonAlt.prototype);
 
 function WindowsList(listContainer) {
-	this._init(listContainer);
+    this._init(listContainer);
 }
 
 WindowsList.prototype = {
-	_init: function(listContainer) {
-		
-		this.listContainer = listContainer;
-		this.tracker = Shell.WindowTracker.get_default();
-		this.apps = {};
-
-		
+    _init: function(listContainer) {
+        
+        this.listContainer = listContainer;
+        this.tracker = Shell.WindowTracker.get_default();
+        this.apps = {};
+        
         this._nWorkspacesNotifyId =
             global.screen.connect('notify::n-workspaces',
                                   Lang.bind(this, this._workspacesChanged));
@@ -228,111 +227,111 @@ WindowsList.prototype = {
         
         this._activeWorkspaceChanged();
         
-	},
-	
-	/**
-	 * Number of workspaces changed
-	 */
-	_workspacesChanged: function() {
-		
-//		global.log('_workspaceChanged');
-	},
-	
-	/**
-	 * Active workspace changed
-	 */
-	_activeWorkspaceChanged: function() {
+    },
+    
+    /**
+     * Number of workspaces changed
+     */
+    _workspacesChanged: function() {
+        
+//      global.log('_workspaceChanged');
+    },
+    
+    /**
+     * Active workspace changed
+     */
+    _activeWorkspaceChanged: function() {
 
-//		global.log('___WORKSPACE_CHANGED___');
-		
-		if (this._windowAddedId)
-			this.metaWorkspace.disconnect(this._windowAddedId);
-		if (this._windowRemovedId)
-			this.metaWorkspace.disconnect(this._windowRemovedId);
+//      global.log('___WORKSPACE_CHANGED___');
+        
+        if (this._windowAddedId)
+            this.metaWorkspace.disconnect(this._windowAddedId);
+        if (this._windowRemovedId)
+            this.metaWorkspace.disconnect(this._windowRemovedId);
 
-		this.metaWorkspace = global.screen.get_active_workspace();
-		
+        this.metaWorkspace = global.screen.get_active_workspace();
+        
         this._windowAddedId = this.metaWorkspace.connect('window-added',
                                                          Lang.bind(this, this._windowAdded));
         this._windowRemovedId = this.metaWorkspace.connect('window-removed',
                                                            Lang.bind(this, this._windowRemoved));
-		
+        
         this._sync();
-	},
-	
-	_windowAdded: function(metaWorkspace, metaWin) {
-		
-//		global.log('___WINDOW_ADDED___');
-		
-		try {
-			
-			let app = this.tracker.get_window_app(metaWin);			
-			let appName = app.get_name();
-			
-			if (!this.apps[appName] && this.metaWorkspace == metaWorkspace)
-				this.apps[appName] = this._createAppMenuButton(app);
-			
-		} catch(e) {
-			global.log(e);
-		}
-	},
-	
-	_windowRemoved: function(metaWorkspace, metaWin) {
-		
-//		global.log('___WINDOW_REMOVED___');
-		this._sync();
-	},
-	
-	_sync: function() {
-		
-		this._clearWindowsList();
-		
-		let apps = this.tracker.get_running_apps('');
-		for (let i = 0, l = apps.length; i < l; i++) {
-			let app = apps[i];
-			let appName = app.get_name();
-			if (!this.apps[appName] && app.is_on_workspace(this.metaWorkspace)) {
-				this.apps[appName] = this._createAppMenuButton(app);
-			}
-		}
-		
-		window._apps = this.apps;
-	},
-	
-	_clearWindowsList: function() {
-		let children = this.listContainer.get_children();
-		for (let i=0, l=children.length; i<l; i++) {
-			this.listContainer.remove_actor(children[i]);
-		}
-		for (let o in this.apps) {
-			let appIcon = this.apps[o];
-			Main.panel._menus.removeMenu(appIcon.menu);
-		};
-		this.apps = {};
-	},
-	
-	_createAppMenuButton: function(app) {
+    },
+    
+    _windowAdded: function(metaWorkspace, metaWin) {
+        
+//      global.log('___WINDOW_ADDED___');
+        
+        try {
+            
+            let app = this.tracker.get_window_app(metaWin);         
+            let appName = app.get_name();
+            
+            if (!this.apps[appName] && this.metaWorkspace == metaWorkspace)
+                this.apps[appName] = this._createAppMenuButton(app);
+            
+        } catch(e) {
+            global.log(e);
+        }
+    },
+    
+    _windowRemoved: function(metaWorkspace, metaWin) {
+        
+//      global.log('___WINDOW_REMOVED___');
+        this._sync();
+    },
+    
+    _sync: function() {
+        
+        this._clearWindowsList();
+        
+        let apps = this.tracker.get_running_apps('');
+        for (let i = 0, l = apps.length; i < l; i++) {
+            let app = apps[i];
+            let appName = app.get_name();
+            if (!this.apps[appName] && app.is_on_workspace(this.metaWorkspace)) {
+                this.apps[appName] = this._createAppMenuButton(app);
+            }
+        }
+        
+        window._apps = this.apps;
+    },
+    
+    _clearWindowsList: function() {
+        let children = this.listContainer.get_children();
+        for (let i=0, l=children.length; i<l; i++) {
+            this.listContainer.remove_actor(children[i]);
+        }
+        for (let o in this.apps) {
+            let appIcon = this.apps[o];
+            Main.panel._menus.removeMenu(appIcon.menu);
+        };
+        this.apps = {};
+    },
+    
+    _createAppMenuButton: function(app) {
 
-//		global.log(app.get_id());
-//		global.log(app.get_name());
-					
-		let appMenuButtonAlt = new AppMenuButtonAlt(app);
-		
-		this.listContainer.add(appMenuButtonAlt.actor, { y_fill: true });
-		appMenuButtonAlt.menu._boxPointer._arrowSide = St.Side.BOTTOM;
-	    Main.panel._menus.addMenu(appMenuButtonAlt.menu);
-	    
-	    // Synchronize the button's pseudo classes with its corner
-	    appMenuButtonAlt.actor.connect('style-changed', Lang.bind(this,
-    		function(actor) {
-		    	let rtl = actor.get_direction() == St.TextDirection.RTL;
-		    	let corner = rtl ? Main.panel._rightCorner : Main.panel._leftCorner;
-		    	let pseudoClass = actor.get_style_pseudo_class();
-		    	corner.actor.set_style_pseudo_class(pseudoClass);
-		    }));
+//      global.log(app.get_id());
+//      global.log(app.get_name());
+                    
+        let appMenuButtonAlt = new AppMenuButtonAlt(app);
+        
+        this.listContainer.add(appMenuButtonAlt.actor, { y_fill: true });
+        appMenuButtonAlt.menu._boxPointer._arrowSide = St.Side.BOTTOM;
+        Main.panel._menus.addMenu(appMenuButtonAlt.menu);
+        
+        // Synchronize the button's pseudo classes with its corner
+        appMenuButtonAlt.actor.connect('style-changed', Lang.bind(this,
+            function(actor) {
+                let rtl = actor.get_direction() == St.TextDirection.RTL;
+                let corner = rtl ? Main.panel._rightCorner : Main.panel._leftCorner;
+                let pseudoClass = actor.get_style_pseudo_class();
+                corner.actor.set_style_pseudo_class(pseudoClass);
+            }));
 
-	    return appMenuButtonAlt;
-	}
+        return appMenuButtonAlt;
+    }
 }
 
 function removeStandardAppMenuButton() {
@@ -352,6 +351,54 @@ function removeStandardAppMenuButton() {
 
 function main(extensionMeta) {
 
+    Main.panel._boxContainer.connect('allocate', Lang.bind(Main.panel, function allocatePanel(container, box, flags) {
+
+        let allocWidth = box.x2 - box.x1;
+        let allocHeight = box.y2 - box.y1;
+        let [leftMinWidth, leftNaturalWidth] = this._leftBox.get_preferred_width(-1);
+        let [centerMinWidth, centerNaturalWidth] = this._centerBox.get_preferred_width(-1);
+        let [rightMinWidth, rightNaturalWidth] = this._rightBox.get_preferred_width(-1);
+
+        let childBox = new Clutter.ActorBox();
+        let centerLeft = 0;
+        let centerRight = 0;
+
+        // Left box
+        childBox.y1 = 0;
+        childBox.y2 = allocHeight;
+        if (this.actor.get_direction() == St.TextDirection.RTL) {
+            childBox.x1 = allocWidth - Math.min(Math.floor(sideWidth),
+                                                leftNaturalWidth);
+            childBox.x2 = allocWidth;
+        } else {
+            childBox.x1 = 0;
+            childBox.x2 = leftNaturalWidth;
+            centerLeft = childBox.x2;
+        }
+        this._leftBox.allocate(childBox, flags);
+
+        // Right box
+        childBox.y1 = 0;
+        childBox.y2 = allocHeight;
+        if (this.actor.get_direction() == St.TextDirection.RTL) {
+            childBox.x1 = 0;
+            childBox.x2 = Math.min(Math.floor(sideWidth),
+                                   rightNaturalWidth);
+        } else {
+            childBox.x1 = allocWidth - rightNaturalWidth;
+            childBox.x2 = allocWidth;
+            centerRight = childBox.x1;
+        }
+        this._rightBox.allocate(childBox, flags);
+        
+        // Center box
+        childBox.x1 = centerLeft;
+        childBox.y1 = 0;
+        childBox.x2 = centerRight;
+        childBox.y2 = allocHeight;
+        this._centerBox.allocate(childBox, flags);
+    }));
+    
     removeStandardAppMenuButton();
     let wl = new WindowsList(Main.panel._centerBox);
 }
