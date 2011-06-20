@@ -45,6 +45,8 @@ const PanelMenu = imports.ui.panelMenu;
 const AltTab = imports.ui.altTab;
 
 const WINDOW_TITLE_MAX_LENGTH = 40;
+const APP_BUTTON_MAX_LENGTH = 120;
+const APP_BUTTON_MIN_LENGTH = 10;
 
 function AppMenuButtonAlt(app) {
     this._init(app);
@@ -227,9 +229,10 @@ WindowsList.prototype = {
         this._switchWorkspaceNotifyId =
             global.window_manager.connect('switch-workspace',
                                           Lang.bind(this, this._activeWorkspaceChanged));
+
+        Main.panel._boxContainer.connect('allocate', Lang.bind(Main.panel, this._allocatePanel));
         
         this._activeWorkspaceChanged();
-        
     },
     
     /**
@@ -334,27 +337,9 @@ WindowsList.prototype = {
             }));
 
         return appMenuButtonAlt;
-    }
-}
-
-function removeStandardAppMenuButton() {
-    let children = Main.panel._leftBox.get_children();
-    // Skip applications menu
-    for (let i=1, l=children.length; i<l; i++) {
-        try {
-            let menuButton = children[i];
-    //        Main.panel._menus.removeMenu(menuButton.menu);
-            Main.panel._leftBox.remove_actor(menuButton);
-        } catch(e) {
-            global.logError(e);
-            global.logError(menuButton);
-        }
-    }
-}
-
-function main(extensionMeta) {
-
-    Main.panel._boxContainer.connect('allocate', Lang.bind(Main.panel, function allocatePanel(container, box, flags) {
+    },
+    
+    _allocatePanel: function(container, box, flags) {
 
         let allocWidth = box.x2 - box.x1;
         let allocHeight = box.y2 - box.y1;
@@ -398,7 +383,42 @@ function main(extensionMeta) {
         childBox.x2 = centerRight;
         childBox.y2 = allocHeight;
         this._centerBox.allocate(childBox, flags);
-    }));
+        
+        // Application buttons width
+        let children = this._centerBox.get_children();
+        let width = childBox.x2 - childBox.x1;
+        let n_apps = isNaN(children.length) ? -1 : children.length;
+        n_apps = n_apps <= 0 ? false : n_apps;
+        
+        if (!n_apps)
+        	return;
+        
+        let appWidth = Math.floor(width / n_apps);
+        appWidth = Math.min(appWidth, APP_BUTTON_MAX_LENGTH);
+        appWidth = Math.max(appWidth, APP_BUTTON_MIN_LENGTH);
+        
+        for (let i = 0; i < n_apps; i++) {
+        	children[i].set_width(appWidth);
+        }
+    }
+}
+
+function removeStandardAppMenuButton() {
+    let children = Main.panel._leftBox.get_children();
+    // Skip applications menu
+    for (let i=1, l=children.length; i<l; i++) {
+        try {
+            let menuButton = children[i];
+    //        Main.panel._menus.removeMenu(menuButton.menu);
+            Main.panel._leftBox.remove_actor(menuButton);
+        } catch(e) {
+            global.logError(e);
+            global.logError(menuButton);
+        }
+    }
+}
+
+function main(extensionMeta) {
     
     removeStandardAppMenuButton();
     let wl = new WindowsList(Main.panel._centerBox);
