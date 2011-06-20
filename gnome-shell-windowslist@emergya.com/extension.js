@@ -129,7 +129,8 @@ AppMenuButtonAlt.prototype = {
         }
         
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        let item = new PopupMenu.PopupMenuItem(_('Cerrar todo'));
+        // _('Close all')
+        let item = new PopupMenu.PopupMenuItem('Cerrar todo');
         item.connect('activate', Lang.bind(this, this._onQuit));
         this.menu.addMenuItem(item);
     },
@@ -158,10 +159,15 @@ AppMenuButtonAlt.prototype = {
         PanelMenu.Button.prototype._onOpenStateChanged.call(this, menu, open);
     },
 
+    /**
+     * If there is only one window activate it and don't show the menu.
+     * If there are more than one window show the menu.
+     */
     _onButtonPress: function(actor, event) {
         let windows = this.getWindows();
         if (windows.length == 1 && !this.menu.isOpen) {
             this._itemActivated(windows[0]);
+            return;
         }
         PanelMenu.Button.prototype._onButtonPress.call(this, actor, event);
     },
