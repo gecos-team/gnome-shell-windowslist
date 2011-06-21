@@ -106,9 +106,6 @@ AppMenuButtonAlt.prototype = {
         let tracker = Shell.WindowTracker.get_default();
         tracker.connect('notify::focus-app', Lang.bind(this, this._sync));
         //tracker.connect('app-state-changed', Lang.bind(this, this._onAppStateChanged));
-        
-
-//        global.window_manager.connect('switch-workspace', Lang.bind(this, this._sync));
 
         this._refreshMenuItems();
         this._sync();
@@ -131,7 +128,7 @@ AppMenuButtonAlt.prototype = {
         }
         
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        // _('Close all')
+        // _('Close all') ?
         let item = new PopupMenu.PopupMenuItem('Cerrar todo');
         item.connect('activate', Lang.bind(this, this._onQuit));
         this.menu.addMenuItem(item);
@@ -147,6 +144,7 @@ AppMenuButtonAlt.prototype = {
     },
     
     _onQuit: function() {
+        // Close all windows
         let windows = this.getWindows();
         for (let i = 0, l = windows.length; i < l; i++) {
             let window = windows[i];
@@ -161,15 +159,11 @@ AppMenuButtonAlt.prototype = {
         PanelMenu.Button.prototype._onOpenStateChanged.call(this, menu, open);
     },
 
-    /**
-     * If there is only one window activate it and don't show the menu.
-     * If there are more than one window show the menu.
-     */
     _onButtonPress: function(actor, event) {
         let windows = this.getWindows();
-        if (windows.length == 1 && !this.menu.isOpen) {
+        if (windows.length == 1 /*&& !this.menu.isOpen*/) {
             this._itemActivated(windows[0]);
-            return;
+//            return;
         }
         PanelMenu.Button.prototype._onButtonPress.call(this, actor, event);
     },
@@ -239,7 +233,6 @@ WindowsList.prototype = {
      * Number of workspaces changed
      */
     _workspacesChanged: function() {
-        
 //      global.log('_workspaceChanged');
     },
     
@@ -247,8 +240,6 @@ WindowsList.prototype = {
      * Active workspace changed
      */
     _activeWorkspaceChanged: function() {
-
-//      global.log('___WORKSPACE_CHANGED___');
         
         if (this._windowAddedId)
             this.metaWorkspace.disconnect(this._windowAddedId);
@@ -266,25 +257,15 @@ WindowsList.prototype = {
     },
     
     _windowAdded: function(metaWorkspace, metaWin) {
+            
+        let app = this.tracker.get_window_app(metaWin);         
+        let appName = app.get_name();
         
-//      global.log('___WINDOW_ADDED___');
-        
-        try {
-            
-            let app = this.tracker.get_window_app(metaWin);         
-            let appName = app.get_name();
-            
-            if (!this.apps[appName] && this.metaWorkspace == metaWorkspace)
-                this.apps[appName] = this._createAppMenuButton(app);
-            
-        } catch(e) {
-            global.log(e);
-        }
+        if (!this.apps[appName] && this.metaWorkspace == metaWorkspace)
+            this.apps[appName] = this._createAppMenuButton(app);
     },
     
     _windowRemoved: function(metaWorkspace, metaWin) {
-        
-//      global.log('___WINDOW_REMOVED___');
         this._sync();
     },
     
@@ -318,9 +299,6 @@ WindowsList.prototype = {
     
     _createAppMenuButton: function(app) {
 
-//      global.log(app.get_id());
-//      global.log(app.get_name());
-                    
         let appMenuButtonAlt = new AppMenuButtonAlt(app);
         
         this.listContainer.add(appMenuButtonAlt.actor, { y_fill: true });
