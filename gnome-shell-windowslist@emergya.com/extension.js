@@ -33,8 +33,8 @@ const St = imports.gi.St;
 const Signals = imports.signals;
 const Lang = imports.lang;
 const Shell = imports.gi.Shell;
-const Gettext = imports.gettext.domain('gnome-shell');
-const _ = Gettext.gettext;
+const Gettext = imports.gettext;
+const _ = Gettext.domain('gnome-shell').gettext;
 
 const Main = imports.ui.main;
 const Panel = imports.ui.panel;
@@ -47,6 +47,8 @@ const AltTab = imports.ui.altTab;
 const WINDOW_TITLE_MAX_LENGTH = 40;
 const APP_BUTTON_MAX_LENGTH = 120;
 const APP_BUTTON_MIN_LENGTH = 10;
+
+let _f = null;
 
 function AppMenuButtonAlt(app) {
     this._init(app);
@@ -128,8 +130,8 @@ AppMenuButtonAlt.prototype = {
         }
         
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        // _('Close all') ?
-        let item = new PopupMenu.PopupMenuItem('Cerrar todo');
+        
+        let item = new PopupMenu.PopupMenuItem(_f('Close all'));
         item.connect('activate', Lang.bind(this, this._onQuit));
         this.menu.addMenuItem(item);
     },
@@ -383,20 +385,22 @@ WindowsList.prototype = {
 
 function removeStandardAppMenuButton() {
     let children = Main.panel._leftBox.get_children();
-    // Skip applications menu
-    for (let i=1, l=children.length; i<l; i++) {
-        try {
-            let menuButton = children[i];
-    //        Main.panel._menus.removeMenu(menuButton.menu);
-            Main.panel._leftBox.remove_actor(menuButton);
-        } catch(e) {
-            global.logError(e);
-            global.logError(menuButton);
+    for (let i=0, l=children.length; i<l; i++) {
+        let _child = children[i].get_children();
+        _child = _child[0];
+        if (_child.get_name() == 'appMenu') {
+    //        Main.panel._menus.removeMenu(children[i].menu);
+            Main.panel._leftBox.remove_actor(children[i]);  
+            break;
         }
     }
 }
 
 function main(extensionMeta) {
+    
+    let localePath = extensionMeta.path + '/locale';
+    Gettext.bindtextdomain('gnome-shell-windowslist', localePath);
+    _f = Gettext.domain('gnome-shell-windowslist').gettext;
     
     removeStandardAppMenuButton();
     let wl = new WindowsList(Main.panel._centerBox);
