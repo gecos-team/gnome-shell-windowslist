@@ -5,4 +5,4 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "Close all"
-msgstr "Cerrar todos"
+msgstr "Cerrar todas"
