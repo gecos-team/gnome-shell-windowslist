@@ -300,11 +300,14 @@ WindowsList.prototype = {
     },
     
     _createAppMenuButton: function(app) {
+        
+        let [x, y] = Main.panel.actor.get_position();
+        let side = y == 0 ? St.Side.TOP : St.Side.BOTTOM;
 
         let appMenuButtonAlt = new AppMenuButtonAlt(app);
         
         this.listContainer.add(appMenuButtonAlt.actor, { y_fill: true });
-        appMenuButtonAlt.menu._boxPointer._arrowSide = St.Side.BOTTOM;
+        appMenuButtonAlt.menu._boxPointer._arrowSide = side;
         Main.panel._menus.addMenu(appMenuButtonAlt.menu);
         
         // Synchronize the button's pseudo classes with its corner
