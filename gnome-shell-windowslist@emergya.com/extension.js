@@ -217,6 +217,9 @@ WindowsList.prototype = {
         this.listContainer = listContainer;
         this.tracker = Shell.WindowTracker.get_default();
         this.apps = {};
+        this.metaWorkspace = null;
+        this._windowAddedId = null;
+        this._windowRemovedId = null;
         
         this._nWorkspacesNotifyId =
             global.screen.connect('notify::n-workspaces',
@@ -243,10 +246,15 @@ WindowsList.prototype = {
      */
     _activeWorkspaceChanged: function() {
         
-        if (this._windowAddedId)
+        if (this._windowAddedId) {
             this.metaWorkspace.disconnect(this._windowAddedId);
-        if (this._windowRemovedId)
+            this._windowAddedId = null;
+        }
+        
+        if (this._windowRemovedId) {
             this.metaWorkspace.disconnect(this._windowRemovedId);
+            this._windowRemovedId = null;
+        }
 
         this.metaWorkspace = global.screen.get_active_workspace();
         
@@ -259,7 +267,7 @@ WindowsList.prototype = {
     },
     
     _windowAdded: function(metaWorkspace, metaWin) {
-            
+        
         let app = this.tracker.get_window_app(metaWin);         
         let appName = app.get_name();
         
