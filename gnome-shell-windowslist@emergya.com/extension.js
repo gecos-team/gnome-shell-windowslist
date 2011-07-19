@@ -238,7 +238,7 @@ WindowsList.prototype = {
      * Number of workspaces changed
      */
     _workspacesChanged: function() {
-//      global.log('_workspaceChanged');
+      this._activeWorkspaceChanged();
     },
     
     /**
@@ -262,7 +262,7 @@ WindowsList.prototype = {
                                                          Lang.bind(this, this._windowAdded));
         this._windowRemovedId = this.metaWorkspace.connect('window-removed',
                                                            Lang.bind(this, this._windowRemoved));
-        
+       
         this._sync();
     },
     
