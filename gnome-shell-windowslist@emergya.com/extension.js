@@ -33,6 +33,7 @@ const St = imports.gi.St;
 const Signals = imports.signals;
 const Lang = imports.lang;
 const Shell = imports.gi.Shell;
+const Pango = imports.gi.Pango;
 const Gettext = imports.gettext;
 const _ = Gettext.domain('gnome-shell').gettext;
 
@@ -45,10 +46,29 @@ const PanelMenu = imports.ui.panelMenu;
 const AltTab = imports.ui.altTab;
 
 const WINDOW_TITLE_MAX_LENGTH = 40;
-const APP_BUTTON_MAX_LENGTH = 120;
+const APP_BUTTON_MAX_LENGTH = 150;
 const APP_BUTTON_MIN_LENGTH = 10;
 
 let _f = null;
+
+function TextShadower() {
+    this._init();
+}
+
+TextShadower.prototype = {
+    __proto__: Panel.TextShadower.prototype,
+    
+    _init: function() {
+        this.actor = new Shell.GenericContainer();
+        this.actor.connect('get-preferred-width', Lang.bind(this, this._getPreferredWidth));
+        this.actor.connect('get-preferred-height', Lang.bind(this, this._getPreferredHeight));
+        this.actor.connect('allocate', Lang.bind(this, this._allocate));
+
+        this._label = new St.Label();
+        this.actor.add_actor(this._label);
+        this._label.raise_top();
+    }
+};
 
 function AppMenuButtonAlt(app) {
     this._init(app);
@@ -64,7 +84,7 @@ AppMenuButtonAlt.prototype = {
 
         this._targetApp = app;
 
-        let bin = new St.Bin({ name: 'appMenu' });
+        let bin = new St.Bin({ name: 'appMenu', x_fill: true });
         this.actor.set_child(bin);
 
         this.actor.reactive = false;
@@ -82,7 +102,8 @@ AppMenuButtonAlt.prototype = {
         this._iconBox.connect('notify::allocation',
                               Lang.bind(this, this._updateIconBoxClip));
         this._container.add_actor(this._iconBox);
-        this._label = new Panel.TextShadower();
+        
+        this._label = new TextShadower();
         this._container.add_actor(this._label.actor);
 
         this._iconBottomClip = 0;        
@@ -111,6 +132,59 @@ AppMenuButtonAlt.prototype = {
 
         this._refreshMenuItems();
         this._sync();
+    },
+
+    _contentAllocate: function(actor, box, flags) {        
+        let allocWidth = box.x2 - box.x1;
+        let allocHeight = box.y2 - box.y1;
+        let childBox = new Clutter.ActorBox();
+
+        let [minWidth, minHeight, naturalWidth, naturalHeight] = this._iconBox.get_preferred_size();
+
+        let direction = this.actor.get_direction();
+
+        let yPadding = Math.floor(Math.max(0, allocHeight - naturalHeight) / 2);
+        childBox.y1 = yPadding;
+        childBox.y2 = childBox.y1 + Math.min(naturalHeight, allocHeight);
+        if (direction == St.TextDirection.LTR) {
+            childBox.x1 = 0;
+            childBox.x2 = childBox.x1 + Math.min(naturalWidth, allocWidth);
+        } else {
+            childBox.x1 = Math.max(0, allocWidth - naturalWidth);
+            childBox.x2 = allocWidth;
+        }
+        this._iconBox.allocate(childBox, flags);
+
+        let iconWidth = childBox.x2 - childBox.x1;
+
+        [minWidth, minHeight, naturalWidth, naturalHeight] = this._label.actor.get_preferred_size();
+
+        yPadding = Math.floor(Math.max(0, allocHeight - naturalHeight) / 2);
+        childBox.y1 = yPadding;
+        childBox.y2 = childBox.y1 + Math.min(naturalHeight, allocHeight);
+
+        if (direction == St.TextDirection.LTR) {
+            childBox.x1 = Math.floor(iconWidth + iconWidth / 2);
+            childBox.x2 = Math.min(childBox.x1 + naturalWidth, allocWidth);
+        } else {
+            childBox.x2 = allocWidth - Math.floor(iconWidth / 2);
+            childBox.x1 = Math.max(0, childBox.x2 - naturalWidth);
+        }
+        this._label.actor.allocate(childBox, flags);
+
+        if (direction == St.TextDirection.LTR) {
+            childBox.x1 = Math.floor(iconWidth / 2) + this._label.actor.width;
+            childBox.x2 = childBox.x1 + this._spinner.actor.width;
+            childBox.y1 = box.y1;
+            childBox.y2 = box.y2 - 1;
+            this._spinner.actor.allocate(childBox, flags);
+        } else {
+            childBox.x1 = -this._spinner.actor.width;
+            childBox.x2 = childBox.x1 + this._spinner.actor.width;
+            childBox.y1 = box.y1;
+            childBox.y2 = box.y2 - 1;
+            this._spinner.actor.allocate(childBox, flags);
+        }
     },
     
     _refreshMenuItems: function() {
@@ -191,7 +265,7 @@ AppMenuButtonAlt.prototype = {
         this._label.setText('');
 
         this._targetApp = targetApp;
-        let icon = targetApp.get_faded_icon(2 * Panel.PANEL_ICON_SIZE);
+        let icon = targetApp.get_faded_icon(Panel.PANEL_ICON_SIZE);
 
         this._label.setText(targetApp.get_name());
 
@@ -229,7 +303,9 @@ WindowsList.prototype = {
             global.window_manager.connect('switch-workspace',
                                           Lang.bind(this, this._activeWorkspaceChanged));
 
-        Main.panel._boxContainer.connect('allocate', Lang.bind(Main.panel, this._allocatePanel));
+        Main.panel._boxContainer.connect('allocate', Lang.bind(this, function(container, box, flags) {
+            this._allocatePanel(container, box, flags, Main.panel);
+        }));
         
         this._activeWorkspaceChanged();
     },
@@ -330,13 +406,13 @@ WindowsList.prototype = {
         return appMenuButtonAlt;
     },
     
-    _allocatePanel: function(container, box, flags) {
+    _allocatePanel: function(container, box, flags, panel) {
 
         let allocWidth = box.x2 - box.x1;
         let allocHeight = box.y2 - box.y1;
-        let [leftMinWidth, leftNaturalWidth] = this._leftBox.get_preferred_width(-1);
-        let [centerMinWidth, centerNaturalWidth] = this._centerBox.get_preferred_width(-1);
-        let [rightMinWidth, rightNaturalWidth] = this._rightBox.get_preferred_width(-1);
+        let [leftMinWidth, leftNaturalWidth] = panel._leftBox.get_preferred_width(-1);
+        let [centerMinWidth, centerNaturalWidth] = panel._centerBox.get_preferred_width(-1);
+        let [rightMinWidth, rightNaturalWidth] = panel._rightBox.get_preferred_width(-1);
 
         let childBox = new Clutter.ActorBox();
         let centerLeft = 0;
@@ -345,7 +421,7 @@ WindowsList.prototype = {
         // Left box
         childBox.y1 = 0;
         childBox.y2 = allocHeight;
-        if (this.actor.get_direction() == St.TextDirection.RTL) {
+        if (panel.actor.get_direction() == St.TextDirection.RTL) {
             childBox.x1 = allocWidth - leftNaturalWidth;
             childBox.x2 = allocWidth;
         } else {
@@ -353,12 +429,12 @@ WindowsList.prototype = {
             childBox.x2 = leftNaturalWidth;
             centerLeft = childBox.x2;
         }
-        this._leftBox.allocate(childBox, flags);
+        panel._leftBox.allocate(childBox, flags);
 
         // Right box
         childBox.y1 = 0;
         childBox.y2 = allocHeight;
-        if (this.actor.get_direction() == St.TextDirection.RTL) {
+        if (panel.actor.get_direction() == St.TextDirection.RTL) {
             childBox.x1 = 0;
             childBox.x2 = rightNaturalWidth;
         } else {
@@ -366,30 +442,31 @@ WindowsList.prototype = {
             childBox.x2 = allocWidth;
             centerRight = childBox.x1;
         }
-        this._rightBox.allocate(childBox, flags);
+        panel._rightBox.allocate(childBox, flags);
         
         // Center box
         childBox.x1 = centerLeft;
         childBox.y1 = 0;
         childBox.x2 = centerRight;
         childBox.y2 = allocHeight;
-        this._centerBox.allocate(childBox, flags);
+        panel._centerBox.allocate(childBox, flags);
         
         // Application buttons width
-        let children = this._centerBox.get_children();
+        let children = panel._centerBox.get_children();
         let width = childBox.x2 - childBox.x1;
         let n_apps = isNaN(children.length) ? -1 : children.length;
         n_apps = n_apps <= 0 ? false : n_apps;
         
         if (!n_apps)
-        	return;
+            return;
         
         let appWidth = Math.floor(width / n_apps);
         appWidth = Math.min(appWidth, APP_BUTTON_MAX_LENGTH);
         appWidth = Math.max(appWidth, APP_BUTTON_MIN_LENGTH);
         
         for (let i = 0; i < n_apps; i++) {
-        	children[i].set_width(appWidth);
+            appButton = children[i];
+            appButton.set_width(appWidth);
         }
     }
 }
