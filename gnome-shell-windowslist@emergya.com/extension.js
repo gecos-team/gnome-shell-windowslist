@@ -237,11 +237,14 @@ AppMenuButtonAlt.prototype = {
 
     _onButtonPress: function(actor, event) {
         let windows = this.getWindows();
-        if (windows.length == 1 /*&& !this.menu.isOpen*/) {
-            this._itemActivated(windows[0]);
-//            return;
+        let button = event.get_button();
+        if (button == St.ButtonMask.ONE) {
+            if (windows.length == 1) {
+                this._itemActivated(windows[0]);
+            }
+        } else if (button == 3 /*St.ButtonMask.THREE == 4*/) {
+            PanelMenu.Button.prototype._onButtonPress.call(this, actor, event);
         }
-        PanelMenu.Button.prototype._onButtonPress.call(this, actor, event);
     },
 
     _sync: function() {
