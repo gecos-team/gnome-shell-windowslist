@@ -466,7 +466,7 @@ WindowsList.prototype = {
         appWidth = Math.max(appWidth, APP_BUTTON_MIN_LENGTH);
         
         for (let i = 0; i < n_apps; i++) {
-            appButton = children[i];
+            let appButton = children[i];
             appButton.set_width(appWidth);
         }
     }
