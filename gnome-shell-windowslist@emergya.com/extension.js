@@ -28,6 +28,10 @@
  * 
  */
 
+/**
+ * @branch 3.0.x
+ */
+
 const Clutter = imports.gi.Clutter;
 const St = imports.gi.St;
 const Signals = imports.signals;
