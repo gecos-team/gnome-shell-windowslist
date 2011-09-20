@@ -485,12 +485,22 @@ function removeStandardAppMenuButton() {
     }
 }
 
-function main(extensionMeta) {
+function main(meta) {
     
-    let localePath = extensionMeta.path + '/locale';
+    let localePath = meta.path + '/locale';
     Gettext.bindtextdomain('gnome-shell-windowslist', localePath);
     _f = Gettext.domain('gnome-shell-windowslist').gettext;
     
     removeStandardAppMenuButton();
     let wl = new WindowsList(Main.panel._centerBox);
+}
+
+function init(meta) {
+    main(meta);
+}
+
+function enable() {
+}
+
+function disable() {
 }
