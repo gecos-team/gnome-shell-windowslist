@@ -28,10 +28,6 @@
  * 
  */
 
-/**
- * @branch 3.1.91
- */
-
 const Clutter = imports.gi.Clutter;
 const St = imports.gi.St;
 const Signals = imports.signals;
@@ -308,7 +304,7 @@ WindowsList.prototype = {
             global.window_manager.connect('switch-workspace',
                                           Lang.bind(this, this._activeWorkspaceChanged));
 
-        Main.panel._boxContainer.connect('allocate', Lang.bind(this, function(container, box, flags) {
+        Main.panel.actor.connect('allocate', Lang.bind(this, function(container, box, flags) {
             this._allocatePanel(container, box, flags, Main.panel);
         }));
         
@@ -349,7 +345,7 @@ WindowsList.prototype = {
     
     _windowAdded: function(metaWorkspace, metaWin) {
         
-        let app = this.tracker.get_window_app(metaWin);         
+        let app = this.tracker.get_window_app(metaWin);
         let appName = app.get_name();
         
         if (!this.apps[appName] && this.metaWorkspace == metaWorkspace)
