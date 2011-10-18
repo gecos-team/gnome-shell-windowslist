@@ -1,19 +1,19 @@
 /**
  * extension.js
  * Copyright (C) 2011, Junta de Andalucía <devmaster@guadalinex.org>
- * 
+ *
  * This file is part of Guadalinex
- * 
+ *
  * This software is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This software is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -23,9 +23,9 @@
  * resulting executable to be covered by the GNU General Public License.
  * This exception does not however invalidate any other reasons why the
  * executable file might be covered by the GNU General Public License.
- * 
+ *
  * Authors:: Antonio Hernández (mailto:ahernandez@emergya.com)
- * 
+ *
  */
 
 /**
@@ -61,7 +61,7 @@ function TextShadower() {
 
 TextShadower.prototype = {
     __proto__: Panel.TextShadower.prototype,
-    
+
     _init: function() {
         this.actor = new Shell.GenericContainer();
         this.actor.connect('get-preferred-width', Lang.bind(this, this._getPreferredWidth));
@@ -106,11 +106,11 @@ AppMenuButtonAlt.prototype = {
         this._iconBox.connect('notify::allocation',
                               Lang.bind(this, this._updateIconBoxClip));
         this._container.add_actor(this._iconBox);
-        
+
         this._label = new TextShadower();
         this._container.add_actor(this._label.actor);
 
-        this._iconBottomClip = 0;        
+        this._iconBottomClip = 0;
 
         this._visible = !Main.overview.visible;
         if (!this._visible)
@@ -129,7 +129,7 @@ AppMenuButtonAlt.prototype = {
         this._container.add_actor(this._spinner.actor);
         this._spinner.actor.lower_bottom();
 
-        
+
         let tracker = Shell.WindowTracker.get_default();
         tracker.connect('notify::focus-app', Lang.bind(this, this._sync));
         //tracker.connect('app-state-changed', Lang.bind(this, this._onAppStateChanged));
@@ -138,7 +138,7 @@ AppMenuButtonAlt.prototype = {
         this._sync();
     },
 
-    _contentAllocate: function(actor, box, flags) {        
+    _contentAllocate: function(actor, box, flags) {
         let allocWidth = box.x2 - box.x1;
         let allocHeight = box.y2 - box.y1;
         let childBox = new Clutter.ActorBox();
@@ -190,14 +190,15 @@ AppMenuButtonAlt.prototype = {
             this._spinner.actor.allocate(childBox, flags);
         }
     },
-    
+
     _refreshMenuItems: function() {
-        
+
         this.menu.removeAll();
         let windows = this.getWindows();
-        
+
         for (let i = 0, l = windows.length; i < l; i++) {
             let window = windows[i];
+
             let title = window.get_title();
             if (title.length > WINDOW_TITLE_MAX_LENGTH) {
                 title = title.substr(0, WINDOW_TITLE_MAX_LENGTH - 3) + '...';
@@ -206,23 +207,37 @@ AppMenuButtonAlt.prototype = {
             item.connect('activate', Lang.bind(this, function() { this._itemActivated(window); }));
             this.menu.addMenuItem(item);
         }
-        
+
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        
+
         let item = new PopupMenu.PopupMenuItem(_f('Close all'));
         item.connect('activate', Lang.bind(this, this._onQuit));
         this.menu.addMenuItem(item);
     },
-    
+
     _itemActivated: function(window) {
         Main.activateWindow(window);
     },
-    
+
+    /**
+     * Return the windows of an application in the current workspace.
+     */
     getWindows: function() {
-        let windows = this._targetApp.get_windows();
+        var windows = [];
+        var _windows = this._targetApp.get_windows();
+        var active_workspace = global.screen.get_active_workspace();
+
+        for (var i=0, l=_windows.length; i<l; i++) {
+            var window = _windows[i];
+            var window_workspace = window.get_workspace();
+            if (window_workspace == active_workspace) {
+                windows.push(window);
+            }
+        }
+
         return windows;
     },
-    
+
     _onQuit: function() {
         // Close all windows
         let windows = this.getWindows();
@@ -250,7 +265,7 @@ AppMenuButtonAlt.prototype = {
     },
 
     _sync: function() {
-        
+
         let targetApp = this._targetApp;
 
         if (!this._targetIsCurrent) {
@@ -279,7 +294,7 @@ AppMenuButtonAlt.prototype = {
 
         if (targetApp.get_state() == Shell.AppState.STARTING)
             this.startAnimation();
-        
+
         this.emit('changed');
     }
 };
@@ -292,14 +307,14 @@ function WindowsList(listContainer) {
 
 WindowsList.prototype = {
     _init: function(listContainer) {
-        
+
         this.listContainer = listContainer;
         this.tracker = Shell.WindowTracker.get_default();
         this.apps = {};
         this.metaWorkspace = null;
         this._windowAddedId = null;
         this._windowRemovedId = null;
-        
+
         this._nWorkspacesNotifyId =
             global.screen.connect('notify::n-workspaces',
                                   Lang.bind(this, this._workspacesChanged));
@@ -311,59 +326,59 @@ WindowsList.prototype = {
         Main.panel._boxContainer.connect('allocate', Lang.bind(this, function(container, box, flags) {
             this._allocatePanel(container, box, flags, Main.panel);
         }));
-        
+
         this._activeWorkspaceChanged();
     },
-    
+
     /**
      * Number of workspaces changed
      */
     _workspacesChanged: function() {
       this._activeWorkspaceChanged();
     },
-    
+
     /**
      * Active workspace changed
      */
     _activeWorkspaceChanged: function() {
-        
+
         if (this._windowAddedId) {
             this.metaWorkspace.disconnect(this._windowAddedId);
             this._windowAddedId = null;
         }
-        
+
         if (this._windowRemovedId) {
             this.metaWorkspace.disconnect(this._windowRemovedId);
             this._windowRemovedId = null;
         }
 
         this.metaWorkspace = global.screen.get_active_workspace();
-        
+
         this._windowAddedId = this.metaWorkspace.connect('window-added',
                                                          Lang.bind(this, this._windowAdded));
         this._windowRemovedId = this.metaWorkspace.connect('window-removed',
                                                            Lang.bind(this, this._windowRemoved));
-       
+
         this._sync();
     },
-    
+
     _windowAdded: function(metaWorkspace, metaWin) {
-        
-        let app = this.tracker.get_window_app(metaWin);         
+
+        let app = this.tracker.get_window_app(metaWin);
         let appName = app.get_name();
-        
+
         if (!this.apps[appName] && this.metaWorkspace == metaWorkspace)
             this.apps[appName] = this._createAppMenuButton(app);
     },
-    
+
     _windowRemoved: function(metaWorkspace, metaWin) {
         this._sync();
     },
-    
+
     _sync: function() {
-        
+
         this._clearWindowsList();
-        
+
         let apps = this.tracker.get_running_apps('');
         for (let i = 0, l = apps.length; i < l; i++) {
             let app = apps[i];
@@ -372,10 +387,10 @@ WindowsList.prototype = {
                 this.apps[appName] = this._createAppMenuButton(app);
             }
         }
-        
+
         window._apps = this.apps;
     },
-    
+
     _clearWindowsList: function() {
         let children = this.listContainer.get_children();
         for (let i=0, l=children.length; i<l; i++) {
@@ -387,18 +402,18 @@ WindowsList.prototype = {
         };
         this.apps = {};
     },
-    
+
     _createAppMenuButton: function(app) {
-        
+
         let [x, y] = Main.panel.actor.get_position();
         let side = y == 0 ? St.Side.TOP : St.Side.BOTTOM;
 
         let appMenuButtonAlt = new AppMenuButtonAlt(app);
-        
+
         this.listContainer.add(appMenuButtonAlt.actor, { y_fill: true });
         appMenuButtonAlt.menu._boxPointer._arrowSide = side;
         Main.panel._menus.addMenu(appMenuButtonAlt.menu);
-        
+
         // Synchronize the button's pseudo classes with its corner
         appMenuButtonAlt.actor.connect('style-changed', Lang.bind(this,
             function(actor) {
@@ -410,7 +425,7 @@ WindowsList.prototype = {
 
         return appMenuButtonAlt;
     },
-    
+
     _allocatePanel: function(container, box, flags, panel) {
 
         let allocWidth = box.x2 - box.x1;
@@ -448,27 +463,27 @@ WindowsList.prototype = {
             centerRight = childBox.x1;
         }
         panel._rightBox.allocate(childBox, flags);
-        
+
         // Center box
         childBox.x1 = centerLeft;
         childBox.y1 = 0;
         childBox.x2 = centerRight;
         childBox.y2 = allocHeight;
         panel._centerBox.allocate(childBox, flags);
-        
+
         // Application buttons width
         let children = panel._centerBox.get_children();
         let width = childBox.x2 - childBox.x1;
         let n_apps = isNaN(children.length) ? -1 : children.length;
         n_apps = n_apps <= 0 ? false : n_apps;
-        
+
         if (!n_apps)
             return;
-        
+
         let appWidth = Math.floor(width / n_apps);
         appWidth = Math.min(appWidth, APP_BUTTON_MAX_LENGTH);
         appWidth = Math.max(appWidth, APP_BUTTON_MIN_LENGTH);
-        
+
         for (let i = 0; i < n_apps; i++) {
             let appButton = children[i];
             appButton.set_width(appWidth);
@@ -483,18 +498,18 @@ function removeStandardAppMenuButton() {
         _child = _child[0];
         if (_child.get_name() == 'appMenu') {
     //        Main.panel._menus.removeMenu(children[i].menu);
-            Main.panel._leftBox.remove_actor(children[i]);  
+            Main.panel._leftBox.remove_actor(children[i]);
             break;
         }
     }
 }
 
 function main(extensionMeta) {
-    
+
     let localePath = extensionMeta.path + '/locale';
     Gettext.bindtextdomain('gnome-shell-windowslist', localePath);
     _f = Gettext.domain('gnome-shell-windowslist').gettext;
-    
+
     removeStandardAppMenuButton();
     let wl = new WindowsList(Main.panel._centerBox);
 }
