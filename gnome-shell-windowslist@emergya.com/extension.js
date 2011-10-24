@@ -78,58 +78,8 @@ AppMenuButtonAlt.prototype = {
     __proto__: Panel.AppMenuButton.prototype,
 
     _init: function(app) {
-        PanelMenu.Button.prototype._init.call(this, 0.0);
-        this._metaDisplay = global.screen.get_display();
-        this._startingApps = [];
-
+        Panel.AppMenuButton.prototype._init.call(this, 0.0);
         this._targetApp = app;
-
-        let bin = new St.Bin({ name: 'appMenu', x_fill: true });
-        this.actor.set_child(bin);
-
-        this.actor.reactive = false;
-        this._targetIsCurrent = false;
-
-        this._container = new Shell.GenericContainer();
-        bin.set_child(this._container);
-        this._container.connect('get-preferred-width', Lang.bind(this, this._getContentPreferredWidth));
-        this._container.connect('get-preferred-height', Lang.bind(this, this._getContentPreferredHeight));
-        this._container.connect('allocate', Lang.bind(this, this._contentAllocate));
-
-        this._iconBox = new Shell.Slicer({ name: 'appMenuIcon' });
-        this._iconBox.connect('style-changed',
-                              Lang.bind(this, this._onIconBoxStyleChanged));
-        this._iconBox.connect('notify::allocation',
-                              Lang.bind(this, this._updateIconBoxClip));
-        this._container.add_actor(this._iconBox);
-
-        this._label = new TextShadower();
-        this._container.add_actor(this._label.actor);
-
-        this._iconBottomClip = 0;
-
-        this._visible = !Main.overview.visible;
-        if (!this._visible)
-            this.actor.hide();
-        Main.overview.connect('hiding', Lang.bind(this, function () {
-            this.show();
-        }));
-        Main.overview.connect('showing', Lang.bind(this, function () {
-            this.hide();
-        }));
-
-        this._stop = true;
-
-        this._spinner = new Panel.AnimatedIcon('process-working.svg',
-                                         Panel.PANEL_ICON_SIZE);
-        this._container.add_actor(this._spinner.actor);
-        this._spinner.actor.lower_bottom();
-
-
-        let tracker = Shell.WindowTracker.get_default();
-        tracker.connect('notify::focus-app', Lang.bind(this, this._sync));
-        //tracker.connect('app-state-changed', Lang.bind(this, this._onAppStateChanged));
-
         this._refreshMenuItems();
         this._sync();
     },
@@ -262,6 +212,8 @@ AppMenuButtonAlt.prototype = {
 
     _sync: function() {
 
+        if (!this._targetApp)
+            return;
         let targetApp = this._targetApp;
 
         if (!this._targetIsCurrent) {
@@ -306,6 +258,7 @@ WindowsList.prototype = {
 
         this.listContainer = listContainer;
         this.tracker = Shell.WindowTracker.get_default();
+        this.appSystem = Shell.AppSystem.get_default();
         this.apps = {};
         this.metaWorkspace = null;
         this._windowAddedId = null;
@@ -375,7 +328,7 @@ WindowsList.prototype = {
 
         this._clearWindowsList();
 
-        let apps = this.tracker.get_running_apps('');
+        let apps = this.appSystem.get_running();
         for (let i = 0, l = apps.length; i < l; i++) {
             let app = apps[i];
             let appName = app.get_name();
