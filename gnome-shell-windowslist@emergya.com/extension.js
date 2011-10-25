@@ -72,6 +72,26 @@ TextShadower.prototype = {
     setText: function(text) {
         this._label.set_text(text);
     },
+
+    _allocate: function(actor, box, flags) {
+
+        let availWidth = box.x2 - box.x1;
+        let availHeight = box.y2 - box.y1;
+
+        let [minChildWidth, minChildHeight, natChildWidth, natChildHeight] =
+            this._label.get_preferred_size();
+
+        let childWidth = Math.min(natChildWidth, availWidth - 2);
+        let childHeight = Math.min(natChildHeight, availHeight - 2);
+
+        let childBox = new Clutter.ActorBox();
+        childBox.x1 = 1;
+        childBox.y1 = 1;
+        childBox.x2 = childBox.x1 + childWidth;
+        childBox.y2 = childBox.y1 + childHeight;
+
+        this._label.allocate(childBox, flags);
+    }
 };
 
 function AppMenuButtonAlt(app) {
