@@ -137,8 +137,19 @@ AppMenuButtonAlt.prototype = {
         }
     },
 
+    setMenuSide: function() {
+        // The box pointer direction depends on the main panel position.
+        // Because the extensions load order can vary,
+        // we must do this check every time the menu is refreshed.
+        let [x, y] = Main.layoutManager.panelBox.get_position();
+        let side = y == 0 ? St.Side.TOP : St.Side.BOTTOM;
+        this.menu._boxPointer._arrowSide = side;
+    },
+
     _refreshMenuItems: function() {
 
+        // Be sure to upate the box pointer direction
+        this.setMenuSide();
         this.menu.removeAll();
         let windows = this.getWindows();
 
@@ -362,13 +373,9 @@ WindowsList.prototype = {
 
     _createAppMenuButton: function(app) {
 
-        let [x, y] = Main.panel.actor.get_position();
-        let side = y == 0 ? St.Side.TOP : St.Side.BOTTOM;
-
         let appMenuButtonAlt = new AppMenuButtonAlt(app);
 
         this.listContainer.add(appMenuButtonAlt.actor, { y_fill: true });
-        appMenuButtonAlt.menu._boxPointer._arrowSide = side;
         Main.panel._menus.addMenu(appMenuButtonAlt.menu);
 
         // Synchronize the button's pseudo classes with its corner
