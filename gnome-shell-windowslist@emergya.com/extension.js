@@ -67,7 +67,11 @@ TextShadower.prototype = {
         this._label = new St.Label();
         this.actor.add_actor(this._label);
         this._label.raise_top();
-    }
+    },
+
+    setText: function(text) {
+        this._label.set_text(text);
+    },
 };
 
 function AppMenuButtonAlt(app) {
@@ -80,6 +84,9 @@ AppMenuButtonAlt.prototype = {
     _init: function(app) {
         Panel.AppMenuButton.prototype._init.call(this, 0.0);
         this._targetApp = app;
+        this._container.remove_actor(this._label.actor);
+        this._label = new TextShadower();
+        this._container.add_actor(this._label.actor);
         this._refreshMenuItems();
         this._sync();
     },
