@@ -255,15 +255,25 @@ AppMenuButtonAlt.prototype = {
 
     _sync: function() {
 
-        if (!this._targetApp)
+        let targetApp = this._targetApp;
+        if (!targetApp)
             return;
 
-        let targetApp = this._targetApp;
+        if (targetApp.get_state() == Shell.AppState.STOPPED) {
+            this.actor.reactive = false;
+            this._targetIsCurrent = false;
 
-        if (!this._targetIsCurrent) {
-            this.actor.reactive = true;
-            this._targetIsCurrent = true;
+            Tweener.removeTweens(this.actor);
+            Tweener.addTween(this.actor, { opacity: 0,
+                                           time: Overview.ANIMATION_TIME,
+                                           transition: 'easeOutQuad' });
+            return;
+        }
 
+        this.actor.reactive = true;
+        this._targetIsCurrent = true;
+
+        if (targetApp.get_state() == Shell.AppState.STARTING) {
             Tweener.removeTweens(this.actor);
             Tweener.addTween(this.actor, { opacity: 255,
                                            time: Overview.ANIMATION_TIME,
@@ -273,14 +283,14 @@ AppMenuButtonAlt.prototype = {
         this._spinner.actor.hide();
         if (this._iconBox.child != null)
             this._iconBox.child.destroy();
+
         this._iconBox.hide();
         this._label.setText('');
 
         this._targetApp = targetApp;
-        let icon = targetApp.get_faded_icon(Panel.PANEL_ICON_SIZE);
-
         this._label.setText(targetApp.get_name());
 
+        let icon = targetApp.get_faded_icon(Panel.PANEL_ICON_SIZE);
         this._iconBox.set_child(icon);
         this._iconBox.show();
 
