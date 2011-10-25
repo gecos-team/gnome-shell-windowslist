@@ -205,6 +205,10 @@ AppMenuButtonAlt.prototype = {
     },
 
     _onButtonPress: function(actor, event) {
+        if (this.menu.isOpen) {
+            this.menu.close();
+            return;
+        }
         let windows = this.getWindows();
         let button = event.get_button();
         if (button == 1 && windows.length == 1) {
