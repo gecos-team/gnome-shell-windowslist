@@ -111,6 +111,10 @@ AppMenuButtonAlt.prototype = {
         this._sync();
     },
 
+    /**
+     * Overwrite this method just for adjust the separation between
+     * the icon and the label the way we want.
+     */
     _contentAllocate: function(actor, box, flags) {
         let allocWidth = box.x2 - box.x1;
         let allocHeight = box.y2 - box.y1;
@@ -150,6 +154,7 @@ AppMenuButtonAlt.prototype = {
         this._label.actor.allocate(childBox, flags);
 
         if (direction == St.TextDirection.LTR) {
+            // This is the line we are interested on
             childBox.x1 = Math.floor(iconWidth / 2) + this._label.actor.width;
             childBox.x2 = childBox.x1 + this._spinner.actor.width;
             childBox.y1 = box.y1;
@@ -166,8 +171,8 @@ AppMenuButtonAlt.prototype = {
 
     setMenuSide: function() {
         // The box pointer direction depends on the main panel position.
-        // Because the extensions load order can vary,
-        // we must do this check every time the menu is refreshed.
+        // Because the extensions load order could vary,
+        // we better do this check every time the menu is refreshed.
         let [x, y] = Main.layoutManager.panelBox.get_position();
         let side = y == 0 ? St.Side.TOP : St.Side.BOTTOM;
         this.menu._boxPointer._arrowSide = side;
