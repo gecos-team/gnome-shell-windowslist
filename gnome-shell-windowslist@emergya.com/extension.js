@@ -75,13 +75,12 @@ TextShadower.prototype = {
 
     _allocate: function(actor, box, flags) {
 
-        let availWidth = box.x2 - box.x1;
-        let availHeight = box.y2 - box.y1;
+        let [availWidth, availHeight] = actor.get_parent().get_size();
 
         let [minChildWidth, minChildHeight, natChildWidth, natChildHeight] =
             this._label.get_preferred_size();
 
-        let childWidth = Math.min(natChildWidth, availWidth - 2);
+        let childWidth = Math.min(natChildWidth, availWidth - 4);
         let childHeight = Math.min(natChildHeight, availHeight - 2);
 
         let childBox = new Clutter.ActorBox();
