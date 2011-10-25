@@ -230,15 +230,6 @@ AppMenuButtonAlt.prototype = {
         return windows;
     },
 
-    _onQuit: function() {
-        // Close all windows
-        let windows = this.getWindows();
-        for (let i = 0, l = windows.length; i < l; i++) {
-            let window = windows[i];
-            window.delete(global.get_current_time());
-        }
-    },
-
     _onOpenStateChanged: function(menu, open) {
         if (open) {
             this._refreshMenuItems();
