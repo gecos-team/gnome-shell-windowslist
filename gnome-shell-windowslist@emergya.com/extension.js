@@ -162,10 +162,11 @@ AppMenuButtonAlt.prototype = {
     },
 
     _itemActivated: function(window) {
-        if (!window.minimized)
-            window.minimize();
-        else
+        if (!window.has_focus()) {
             Main.activateWindow(window);
+        } else {
+            window.minimize();
+        }
     },
 
     /**
