@@ -24,7 +24,7 @@
  * This exception does not however invalidate any other reasons why the
  * executable file might be covered by the GNU General Public License.
  *
- * Authors:: Antonio Hernández (mailto:ahernandez@emergya.com)
+ * Author: Antonio Hernández <ahernandez@emergya.com>
  *
  */
 
@@ -50,6 +50,8 @@ const APP_BUTTON_MAX_LENGTH = 150;
 const APP_BUTTON_MIN_LENGTH = 10;
 
 let _f = null;
+let appMenu =  null;
+let wl = null;
 
 function TextShadower() {
     this._init();
@@ -382,7 +384,7 @@ WindowsList.prototype = {
 
     _sync: function() {
 
-        this._clearWindowsList();
+        this.clearWindowsList();
 
         let apps = this.appSystem.get_running();
         for (let i = 0, l = apps.length; i < l; i++) {
@@ -396,7 +398,7 @@ WindowsList.prototype = {
         window._apps = this.apps;
     },
 
-    _clearWindowsList: function() {
+    clearWindowsList: function() {
         let children = this.listContainer.get_children();
         for (let i=0, l=children.length; i<l; i++) {
             this.listContainer.remove_actor(children[i]);
@@ -493,26 +495,14 @@ WindowsList.prototype = {
 }
 
 function removeStandardAppMenuButton() {
-    let children = Main.panel._leftBox.get_children();
-    for (let i=0, l=children.length; i<l; i++) {
-        let _child = children[i].get_children();
-        _child = _child[0];
-        if (_child.get_name() == 'appMenu') {
-    //        Main.panel._menus.removeMenu(children[i].menu);
-            Main.panel._leftBox.remove_actor(children[i]);
-            break;
-        }
-    }
+    appMenu = Main.panel._appMenu;
+    Main.panel._leftBox.remove_actor(appMenu.actor);
 }
 
 function main(meta) {
-
     let localePath = meta.path + '/locale';
     Gettext.bindtextdomain('gnome-shell-windowslist', localePath);
     _f = Gettext.domain('gnome-shell-windowslist').gettext;
-
-    removeStandardAppMenuButton();
-    let wl = new WindowsList(Main.panel._centerBox);
 }
 
 function init(meta) {
@@ -520,7 +510,12 @@ function init(meta) {
 }
 
 function enable() {
+    removeStandardAppMenuButton();
+    wl = new WindowsList(Main.panel._centerBox);
 }
 
 function disable() {
+    wl.clearWindowsList();
+    wl = null;
+    Main.panel._leftBox.add_actor(appMenu.actor);
 }
