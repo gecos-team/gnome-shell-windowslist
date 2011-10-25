@@ -215,6 +215,8 @@ AppMenuButtonAlt.prototype = {
      * Return the windows of an application in the current workspace.
      */
     getWindows: function() {
+        if (!this._targetApp)
+            return [];
         var windows = [];
         var _windows = this._targetApp.get_windows();
         var active_workspace = global.screen.get_active_workspace();
@@ -255,6 +257,7 @@ AppMenuButtonAlt.prototype = {
 
         if (!this._targetApp)
             return;
+
         let targetApp = this._targetApp;
 
         if (!this._targetIsCurrent) {
