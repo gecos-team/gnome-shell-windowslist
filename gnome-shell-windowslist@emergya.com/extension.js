@@ -340,6 +340,8 @@ WindowsList.prototype = {
     _windowAdded: function(metaWorkspace, metaWin) {
 
         let app = this.tracker.get_window_app(metaWin);
+        if (!app)
+            return;
         let appName = app.get_name();
 
         if (!this.apps[appName] && this.metaWorkspace == metaWorkspace)
