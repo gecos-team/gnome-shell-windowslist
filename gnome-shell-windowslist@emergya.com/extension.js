@@ -181,7 +181,7 @@ AppMenuButtonAlt.prototype = {
 
     _refreshMenuItems: function() {
 
-        // Be sure to upate the box pointer direction
+        // Be sure to update the box pointer direction
         this.setMenuSide();
         this.menu.removeAll();
         let windows = this.getWindows();
@@ -328,11 +328,22 @@ WindowsList.prototype = {
             global.window_manager.connect('switch-workspace',
                                           Lang.bind(this, this._activeWorkspaceChanged));
 
-        Main.panel.actor.connect('allocate', Lang.bind(this, function(container, box, flags) {
+        this._mainPanelAllocateId = Main.panel.actor.connect('allocate', Lang.bind(this, function(container, box, flags) {
             this._allocatePanel(container, box, flags, Main.panel);
         }));
 
         this._activeWorkspaceChanged();
+    },
+
+    free: function() {
+        if (this._windowAddedId)
+            this.metaWorkspace.disconnect(this._windowAddedId);
+        if (this._windowRemovedId)
+            this.metaWorkspace.disconnect(this._windowRemovedId);
+        global.screen.disconnect(this._nWorkspacesNotifyId);
+        global.window_manager.disconnect(this._switchWorkspaceNotifyId);
+        Main.panel.actor.disconnect(this._mainPanelAllocateId);
+        this._clearWindowsList();
     },
 
     /**
@@ -384,7 +395,7 @@ WindowsList.prototype = {
 
     _sync: function() {
 
-        this.clearWindowsList();
+        this._clearWindowsList();
 
         let apps = this.appSystem.get_running();
         for (let i = 0, l = apps.length; i < l; i++) {
@@ -398,7 +409,7 @@ WindowsList.prototype = {
         window._apps = this.apps;
     },
 
-    clearWindowsList: function() {
+    _clearWindowsList: function() {
         let children = this.listContainer.get_children();
         for (let i=0, l=children.length; i<l; i++) {
             this.listContainer.remove_actor(children[i]);
@@ -515,7 +526,7 @@ function enable() {
 }
 
 function disable() {
-    wl.clearWindowsList();
+    wl.free();
     wl = null;
     Main.panel._leftBox.add_actor(appMenu.actor);
 }
