@@ -361,10 +361,12 @@ WindowsList.prototype = {
 
         if (this._windowAddedId) {
             this.metaWorkspace.disconnect(this._windowAddedId);
+            this._windowAddedId = null;
         }
 
         if (this._windowRemovedId) {
             this.metaWorkspace.disconnect(this._windowRemovedId);
+            this._windowRemovedId = null;
         }
 
         this.metaWorkspace = global.screen.get_active_workspace();
@@ -418,7 +420,7 @@ WindowsList.prototype = {
     _clearWindowsList: function() {
         let children = this.listContainer.get_children();
         for (let i=0, l=children.length; i<l; i++) {
-            children[i].destroy();
+            this.listContainer.remove_actor(children[i]);
         }
         for (let o in this.apps) {
             let appIcon = this.apps[o];
