@@ -217,8 +217,9 @@ AppMenuButtonAlt.prototype = {
      * Return the windows of an application in the current workspace.
      */
     getWindows: function() {
-        if (!this._targetApp)
+        if (!this._targetApp) {
             return [];
+        }
         var windows = [];
         var _windows = this._targetApp.get_windows();
         var active_workspace = global.screen.get_active_workspace();
@@ -360,12 +361,10 @@ WindowsList.prototype = {
 
         if (this._windowAddedId) {
             this.metaWorkspace.disconnect(this._windowAddedId);
-            this._windowAddedId = null;
         }
 
         if (this._windowRemovedId) {
             this.metaWorkspace.disconnect(this._windowRemovedId);
-            this._windowRemovedId = null;
         }
 
         this.metaWorkspace = global.screen.get_active_workspace();
@@ -381,12 +380,16 @@ WindowsList.prototype = {
     _windowAdded: function(metaWorkspace, metaWin) {
 
         let app = this.tracker.get_window_app(metaWin);
-        if (!app)
+        if (!app) {
             return;
+        }
+
         let appName = app.get_name();
 
-        if (!this.apps[appName] && this.metaWorkspace == metaWorkspace)
+        if (!this.apps[appName] && this.metaWorkspace == metaWorkspace) {
             this.apps[appName] = this._createAppMenuButton(app);
+            this._sync();
+        }
     },
 
     _windowRemoved: function(metaWorkspace, metaWin) {
@@ -398,6 +401,9 @@ WindowsList.prototype = {
         this._clearWindowsList();
 
         let apps = this.appSystem.get_running();
+        apps.sort(function(a1, a2) {
+            return a1.get_name() > a2.get_name();
+        });
         for (let i = 0, l = apps.length; i < l; i++) {
             let app = apps[i];
             let appName = app.get_name();
@@ -412,7 +418,7 @@ WindowsList.prototype = {
     _clearWindowsList: function() {
         let children = this.listContainer.get_children();
         for (let i=0, l=children.length; i<l; i++) {
-            this.listContainer.remove_actor(children[i]);
+            children[i].destroy();
         }
         for (let o in this.apps) {
             let appIcon = this.apps[o];
@@ -427,15 +433,6 @@ WindowsList.prototype = {
 
         this.listContainer.add(appMenuButtonAlt.actor, { y_fill: true });
         Main.panel._menus.addMenu(appMenuButtonAlt.menu);
-
-        // Synchronize the button's pseudo classes with its corner
-        appMenuButtonAlt.actor.connect('style-changed', Lang.bind(this,
-            function(actor) {
-                let rtl = actor.get_direction() == St.TextDirection.RTL;
-                let corner = rtl ? Main.panel._rightCorner : Main.panel._leftCorner;
-                let pseudoClass = actor.get_style_pseudo_class();
-                corner.actor.set_style_pseudo_class(pseudoClass);
-            }));
 
         return appMenuButtonAlt;
     },
